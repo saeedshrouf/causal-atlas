@@ -10,3 +10,4 @@ version: "0.1.2"
 date-released: "2026-10-04"
 abstract: "A structured, source-linked catalog of datasets and generators for causal research."
 license: MIT
+repository-code: "https://github.com/saeedshrouf/causal-atlas"
