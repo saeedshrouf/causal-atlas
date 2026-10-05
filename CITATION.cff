@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this catalog, please cite this release and the original datasets."
+title: "Causal Atlas"
+type: software
+authors:
+  - family-names: "Shrouf"
+    given-names: "Saeed"
+    affiliation: "University of Toronto"
+version: "0.1.2"
+date-released: "2026-10-04"
+abstract: "A structured, source-linked catalog of datasets and generators for causal research."
+license: MIT
