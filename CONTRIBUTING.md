@@ -12,8 +12,4 @@ For a pull request:
 
 New resources should use the same property schema as existing records. A missing property is represented by an explicit review state, not by omitting its key. Avoid copying large passages from publications into evidence locations.
 
-The dated files in `research/` preserve earlier searches, annotations and releases. They are not inputs to the website or to normal catalogue editing. Historical integration scripts require a new output path and cannot overwrite the active catalogue. Run `npm run test:archive` to check the frozen v0.3.0 integration.
-
 With Node.js 22 or later and Python 3 available, run `npm ci` to install development tools. `npm run standalone` creates a self-contained preview in `dist/`. For browser checks, run `npx playwright install chromium`, build the preview, then run `npm run test:browser`. These tools are not needed to host the static site.
-
-When copying this release over v0.3.0 manually, remove `tests/pilot.test.mjs`, `scripts/standalone.py` and the old `.ttf` files in `assets/fonts/`. Their replacements are included.
