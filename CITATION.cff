@@ -6,8 +6,8 @@ authors:
   - family-names: "Shrouf"
     given-names: "Saeed"
     affiliation: "University of Toronto"
-version: "0.1.2"
-date-released: "2026-10-04"
+version: "0.3.1"
+date-released: "2026-10-06"
 abstract: "A structured, source-linked catalog of datasets and generators for causal research."
 license: MIT
 repository-code: "https://github.com/saeedshrouf/causal-atlas"

@@ -1,4 +1,4 @@
-import { esc, html } from "./text.js";
+import { esc, label, html } from "./text.js";
 export function mountGuide(root, vocab, closePopover) {
   const guideButton = document.createElement("button");
   guideButton.type = "button";
@@ -83,6 +83,11 @@ export function mountGuide(root, vocab, closePopover) {
     guide.querySelector(".ca-definition-copy").innerHTML = html`
       <h3>${esc(v.label)}</h3>
       <p>${esc(v.definition)}</p>
+      ${v.value_definitions ? html`<dl class="ca-value-definitions">
+        ${Object.entries(v.value_definitions).map(([value, definition]) => html`
+          <dt>${esc(label(value))}</dt><dd>${esc(definition)}</dd>
+        `).join("")}
+      </dl>` : ""}
     `;
   };
   selectDefinition.addEventListener("change", showDefinition);

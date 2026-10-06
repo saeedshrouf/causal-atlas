@@ -4,34 +4,50 @@ const empirical = new Set([
   "expert_reference",
   "domain_knowledge",
 ]);
+export function matchesName(record, query) {
+  const normalize = (value) =>
+    value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const names = [
+    record.title,
+    record.family_id.replace(/_/g, " "),
+    ...(record.aliases || []),
+  ];
+  const term = normalize(query.trim());
+  return names.some((name) => normalize(name).includes(term));
+}
+
 function referenceMatch(refs, q, p) {
+  const query = typeof q === "string" ? { kind: q } : q;
+  if (!query || typeof query.kind !== "string") return false;
   return refs.some((r) => {
-    if (q === "model_graph")
+    if (query.visibility && r.visibility !== query.visibility) return false;
+    const kind = query.kind;
+    if (kind === "model_graph")
       return (
         r.object === "graph" && model.has(r.basis) && r.coverage === "complete_for_model"
       );
-    if (q === "empirical_graph")
+    if (kind === "empirical_graph")
       return ["graph", "pair_direction"].includes(r.object) && empirical.has(r.basis);
-    if (["model_potential_outcomes", "model_same_unit_outcomes"].includes(q))
+    if (["model_potential_outcomes", "model_same_unit_outcomes"].includes(kind))
       return (
         r.object === "potential_outcomes" &&
         model.has(r.basis) &&
-        (q === "model_potential_outcomes" ||
+        (kind === "model_potential_outcomes" ||
           (p.pairing.state === "documented" &&
             p.pairing.values.includes("same_unit_simulated_worlds")))
       );
-    if (q === "mean_outcomes")
+    if (kind === "mean_outcomes")
       return r.object === "conditional_mean_outcomes" && model.has(r.basis);
-    if (q === "effect_parameter")
+    if (kind === "effect_parameter")
       return r.object === "effect_parameter" && model.has(r.basis);
-    if (q === "experimental_outcomes")
+    if (kind === "experimental_outcomes")
       return (
         ["observed_outcomes", "interventional_samples", "policy_returns"].includes(
           r.object,
         ) && r.basis === "experimental_measurement"
       );
-    if (q === "latent_factors") return r.object === "latent_factors";
-    if (q === "answer_labels") return r.object === "answer_labels";
+    if (kind === "latent_factors") return r.object === "latent_factors";
+    if (kind === "answer_labels") return r.object === "answer_labels";
     return false;
   });
 }

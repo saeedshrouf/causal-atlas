@@ -55,35 +55,35 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url(fonts/inter-0.ttf) format("truetype");
+  src: url(fonts/inter-0.woff2) format("woff2");
 }
 @font-face {
   font-family: Inter;
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url(fonts/inter-1.ttf) format("truetype");
+  src: url(fonts/inter-1.woff2) format("woff2");
 }
 @font-face {
   font-family: Inter;
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url(fonts/inter-2.ttf) format("truetype");
+  src: url(fonts/inter-2.woff2) format("woff2");
 }
 @font-face {
   font-family: Newsreader;
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url(fonts/newsreader-0.ttf) format("truetype");
+  src: url(fonts/newsreader-0.woff2) format("woff2");
 }
 @font-face {
   font-family: Newsreader;
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url(fonts/newsreader-1.ttf) format("truetype");
+  src: url(fonts/newsreader-1.woff2) format("woff2");
 }
 #causal-atlas {
   --ca-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -1571,4 +1571,13 @@ html {
   .ca-theme-toggle {
     transition: none;
   }
+}
+
+.ca-value-definitions dt {
+  margin-top: 12px;
+  font-weight: 500;
+}
+.ca-value-definitions dd {
+  margin: 3px 0 0;
+  color: var(--ca-secondary);
 }

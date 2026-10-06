@@ -1,6 +1,6 @@
 {
   "name": "causal-atlas",
-  "version": "0.1.2",
+  "version": "0.3.1",
   "private": true,
   "type": "module",
   "description": "A source-linked catalog of datasets and generators for causal research.",
@@ -9,9 +9,11 @@
     "test": "node --test tests/*.test.mjs",
     "test:browser": "node tests/browser.mjs",
     "preview": "python3 -m http.server 8000",
-    "standalone": "python3 scripts/standalone.py"
+    "standalone": "node scripts/standalone.mjs",
+    "test:archive": "node --test tests/archive/*.test.mjs"
   },
   "devDependencies": {
+    "esbuild": "0.28.2",
     "playwright": "1.62.1"
   },
   "engines": {

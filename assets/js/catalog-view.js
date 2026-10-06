@@ -1,4 +1,5 @@
 import { esc, label, html } from "./text.js";
+import { primaryProperties, previewProperties } from "./presentation.js";
 export function createCatalogView(data) {
   const vocab = data.vocabulary.fields;
   const sources = Object.fromEntries(data.sources.map((s) => [s.id, s]));
@@ -14,6 +15,7 @@ export function createCatalogView(data) {
           typeof v === "string"
             ? label(v)
             : Object.entries(v)
+                .filter(([key]) => key !== "evidence")
                 .map(([k, x]) => `${label(k)}: ${label(x)}`)
                 .join("; "),
         )
@@ -90,7 +92,10 @@ export function createCatalogView(data) {
     return html`
       <div class="atlas-property">
         <dt>${esc(vocab[key].label)}</dt>
-        <dd>${value}${pending}</dd>
+        <dd>
+          ${value}${pending}
+          ${claim.note ? html`<p class="atlas-definition">${esc(claim.note)}</p>` : ""}
+        </dd>
       </div>
     `;
   }
@@ -98,7 +103,11 @@ export function createCatalogView(data) {
     const links = [...new Map(r.links.map((l) => [l.url, l])).values()];
     const paper = (l) =>
       /nature\.com|pubmed\.|proceedings\.mlr\.|arxiv\.org|openreview\.net/.test(l.url);
-    links.sort((a, b) => Number(paper(a)) - Number(paper(b)));
+    const rank = (link) => (link.role === "data" ? 0 : paper(link) ? 2 : 1);
+    const linkLabel = (link) =>
+      ({ data: "Data files", code: "Source code" })[link.role] ||
+      (paper(link) ? "Research paper" : "Provider page");
+    links.sort((a, b) => rank(a) - rank(b));
     return links
       .map(
         (l) => html`
@@ -108,7 +117,7 @@ export function createCatalogView(data) {
             target="_blank"
             rel="noopener noreferrer"
           >
-            ${paper(l) ? "Research paper" : "Open resource"}
+            ${linkLabel(l)}
             <span aria-hidden="true">↗</span>
             <span class="ca-visually-hidden">: ${esc(r.title)} (opens in a new tab)</span>
           </a>
@@ -117,10 +126,24 @@ export function createCatalogView(data) {
       .join("");
   }
   function sourcePropertyHTML(k, c) {
+    const references = k === "references" ? c.values.filter((value) => value.evidence?.length) : [];
+    const assigned = references.flatMap((value) => value.evidence);
+    const remaining = c.evidence.filter((item) => !assigned.some((evidence) =>
+      evidence.source_id === item.source_id && evidence.locator === item.locator));
     return html`
       <h4>${esc(vocab[k].label)}</h4>
       ${valueList([c.state, c.basis])}
-      ${c.evidence?.length ? evidenceHTML(c.evidence) : '<p class="atlas-subtle">No source citation recorded for this property.</p>'}
+      ${references.map((reference) => html`
+        <h5>${esc(label(reference.object))}</h5>
+        ${objectFields([["basis", reference.basis], ["scope", reference.scope],
+          ["coverage", reference.coverage], ["availability", reference.visibility]])}
+        ${evidenceHTML(reference.evidence)}
+      `).join("")}
+      ${remaining.length ? html`
+        ${references.length ? "<h5>Property-level sources</h5>" : ""}
+        ${evidenceHTML(remaining)}
+      ` : ""}
+      ${!assigned.length && !remaining.length ? '<p class="atlas-subtle">No source citation recorded for this property.</p>' : ""}
     `;
   }
   function provenanceHTML(r, p, profile) {
@@ -185,17 +208,7 @@ export function createCatalogView(data) {
   function detailHTML(record, match, selected = "") {
     const profile = record.profiles.find((profile) => profile.id === selected);
     const properties = profile ? profile.properties : record.properties;
-    const primary = [
-      "tasks",
-      "origin",
-      "modalities",
-      "structure",
-      "identification_design",
-      "regimes",
-      "references",
-      "access_modes",
-      "access_requirements",
-    ];
+    const primary = primaryProperties(properties);
     const remaining = Object.keys(vocab).filter((key) => !primary.includes(key));
     const groups = [...new Set(remaining.map((key) => vocab[key].group))];
     const release =
@@ -265,7 +278,7 @@ export function createCatalogView(data) {
   }
 
   function metadataTags(properties) {
-    return ["origin", "modalities", "regimes"]
+    return previewProperties
       .flatMap((key) => {
         const claim = properties[key];
         const values =
@@ -308,7 +321,6 @@ export function createCatalogView(data) {
         <h3 class="ca-title">
           <button
             type="button"
-            class="cursor-interaction"
             data-expand="${r.id}"
             aria-expanded="false"
             aria-controls="ca-detail-${r.id}"
@@ -331,7 +343,7 @@ export function createCatalogView(data) {
       <div class="ca-reference">${ref}</div>
       <button
         type="button"
-        class="ca-row-open cursor-interaction"
+        class="ca-row-open"
         data-expand="${r.id}"
         aria-label="Open details: ${esc(r.title)}"
         aria-expanded="false"

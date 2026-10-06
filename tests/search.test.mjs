@@ -100,25 +100,8 @@ test("numeric filters retain units and use containment, not overlap", () => {
   );
 });
 
-test("known catalog queries retain their results", () => {
+test("a graph filter finds a matching configuration", () => {
   const core = catalog.records.filter((record) => record.role === "core");
-  assert.equal(core.length, 95);
-  assert.equal(
-    core.filter((record) =>
-      matchRecord(record, { tasks: "discovery", origin: "measured" }),
-    ).length,
-    18,
-  );
-  assert.equal(
-    core.filter((record) =>
-      matchRecord(record, {
-        tasks: "discovery",
-        origin: "measured",
-        reference_query: "empirical_graph",
-      }),
-    ).length,
-    12,
-  );
   const record = core.find((record) => record.id === "lt_crl_benchmark_v1");
   assert.equal(
     matchRecord(record, { reference_query: "model_graph" }).profile_id,

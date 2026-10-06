@@ -1,22 +1,22 @@
 import { config } from "../../site.config.js";
-import { matchRecord } from "./search.js";
+import { matchRecord, matchesName } from "./search.js";
 import { esc, label, html } from "./text.js";
 import { createCatalogView } from "./catalog-view.js";
 import { renderIcons } from "./icons.js";
 import { mountGuide } from "./guide.js";
 import { mountFooter } from "./footer.js";
+import { mountNavigation } from "./navigation.js";
+import { primaryFilters, advancedFilters } from "./presentation.js";
 
-async function start() {
-  const root = document.getElementById("causal-atlas");
+async function start(root) {
   const embedded = document.getElementById("catalog-data");
   const response = embedded
     ? null
     : await fetch(new URL("../../data/catalog.json", import.meta.url));
   if (response && !response.ok) throw new Error("Catalog request failed");
   const data = embedded ? JSON.parse(embedded.textContent) : await response.json();
-  const { propertyText, sourcePropertyHTML, detailHTML, rowHTML } =
+  const { sourcePropertyHTML, detailHTML, rowHTML } =
     createCatalogView(data);
-  mountFooter(root, config);
 
   const vocab = data.vocabulary.fields;
   const records = data.records.slice().sort((a, b) =>
@@ -27,52 +27,15 @@ async function start() {
   );
   const q = (s) => root.querySelector(s);
 
-  const facets = [
-    {
-      key: "tasks",
-      title: "Research task",
-      values: vocab.tasks.allowed_values,
-    },
-    {
-      key: "origin",
-      title: "Data origin",
-      values: vocab.origin.allowed_values,
-    },
-    {
-      key: "regimes",
-      title: "Available data",
-      values: vocab.regimes.allowed_values,
-    },
-    {
-      key: "reference_query",
-      title: "Reference",
-      values: [
-        "model_graph",
-        "empirical_graph",
-        "model_potential_outcomes",
-        "experimental_outcomes",
-        "model_same_unit_outcomes",
-        "mean_outcomes",
-        "effect_parameter",
-        "latent_factors",
-        "answer_labels",
-      ],
-    },
-    {
-      key: "modalities",
-      title: "Data format",
-      values: vocab.modalities.allowed_values,
-    },
-  ];
-  const advanced = [
-    "identification_design",
-    "structure",
-    "domain",
-    "access_modes",
-    "access_requirements",
-    "graph_form",
-    "latent_confounding",
-  ];
+  const facets = primaryFilters.map((filter) => ({
+    ...filter,
+    title: filter.title || vocab[filter.key].label,
+    values: filter.values || vocab[filter.key].allowed_values,
+  }));
+  const advanced = advancedFilters;
+  const coreCount = records.filter((record) => record.role === "core").length;
+  q("[data-catalog-summary]").textContent = `The current catalogue contains ${records.length} records, of which ${coreCount} form the core collection and ${records.length - coreCount} are designated as adjacent resources. `;
+  q("[data-property-count]").textContent = Object.keys(vocab).length;
   const expanded = new Map();
   let filters = {},
     search = "",
@@ -81,11 +44,6 @@ async function start() {
     matches = [],
     activePopover = null,
     firstRender = true;
-  const norm = (x) =>
-    x
-      .normalize("NFKD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase();
   const reduced = matchMedia("(prefers-reduced-motion:reduce)");
   const icons = () => renderIcons(root);
   const motion = (el, keyframes, options = {}) =>
@@ -96,38 +54,31 @@ async function start() {
           easing: "cubic-bezier(.2,.8,.2,1)",
           ...options,
         });
-  const emptyLabels = {
-    tasks: "All research tasks",
-    origin: "Any origin",
-    regimes: "Any regime",
-    reference_query: "Any reference",
-    modalities: "Any format",
-  };
+  const emptyLabels = Object.fromEntries(facets.map((filter) => [filter.key, filter.empty]));
   q("[data-facets]").innerHTML =
     facets
       .map(
         (f) => html`
           <button
             type="button"
-            class="ca-facet-trigger cursor-interaction"
+            class="ca-facet-trigger"
             data-popover="${f.key}"
             aria-controls="ca-filter-options"
             aria-expanded="false"
             data-active="false"
           >
-            <span class="ca-field-label">${f.title}</span>
+            <span class="ca-field-label">${esc(f.title)}</span>
             <span class="ca-field-value">${emptyLabels[f.key]}</span>
             <i data-lucide="chevron-down" aria-hidden="true"></i>
           </button>
         `,
       )
       .join("") +
-    '<button type="button" class="ca-facet-trigger cursor-interaction" data-popover="advanced" aria-controls="ca-filter-options" aria-expanded="false" data-active="false"><span>More properties</span><i data-lucide="plus" aria-hidden="true"></i></button>';
+    '<button type="button" class="ca-facet-trigger" data-popover="advanced" aria-controls="ca-filter-options" aria-expanded="false" data-active="false"><span>More properties</span><i data-lucide="plus" aria-hidden="true"></i></button>';
   function eligible(r) {
     return (
       (includeAdjacent || r.role === "core") &&
-      (!search ||
-        norm(`${r.title} ${r.family_id.replace(/_/g, " ")}`).includes(norm(search)))
+      matchesName(r, search)
     );
   }
   function optionCount(k, v) {
@@ -157,7 +108,7 @@ async function start() {
     panel.classList.toggle("advanced", activePopover === "advanced");
     if (activePopover === "advanced") {
       panel.innerHTML =
-        '<div class="ca-popover-heading"><span>More filters</span><button type="button" data-close-popover class="cursor-interaction">Done</button></div><div class="ca-advanced-grid">' +
+        '<div class="ca-popover-heading"><span>More filters</span><button type="button" data-close-popover>Done</button></div><div class="ca-advanced-grid">' +
         advanced
           .map(
             (k) => html`
@@ -179,14 +130,14 @@ async function start() {
             `,
           )
           .join("") +
-        html`</div><label class="ca-check cursor-interaction"><input type="checkbox" data-adjacent ${includeAdjacent ? "checked" : ""}> Include adjacent robustness datasets</label>`;
+        html`</div><label class="ca-check"><input type="checkbox" data-adjacent ${includeAdjacent ? "checked" : ""}> Include adjacent robustness datasets</label>`;
     } else {
       const f = facets.find((x) => x.key === activePopover);
       panel.innerHTML =
         html`
           <div class="ca-popover-heading">
-            <span>${f.title}</span>
-            <button type="button" class="cursor-interaction" data-clear-facet="${f.key}">
+            <span>${esc(f.title)}</span>
+            <button type="button" data-clear-facet="${f.key}">
               Clear
             </button>
           </div>
@@ -196,9 +147,9 @@ async function start() {
             (v) => html`
               <button
                 type="button"
-                class="ca-popover-option cursor-interaction"
+                class="ca-popover-option"
                 data-key="${f.key}"
-                data-value="${v}"
+                data-value="${esc(v)}"
                 aria-pressed="${filters[f.key] === v}"
               >
                 <span>${esc(label(v))}</span>
@@ -251,7 +202,7 @@ async function start() {
           (k) => html`
             <button
               type="button"
-              class="ca-selection cursor-interaction"
+              class="ca-selection"
               data-remove="${k}"
               aria-label="Remove ${esc(label(filters[k]))} filter"
             >
@@ -262,7 +213,7 @@ async function start() {
         )
         .join("") +
       (keys.length
-        ? '<button type="button" class="ca-text-button cursor-interaction" data-clear-tags>Clear all</button>'
+        ? '<button type="button" class="ca-text-button" data-clear-tags>Clear all</button>'
         : "");
     const container = q("[data-results]"),
       oldNodes = new Map(
@@ -305,7 +256,7 @@ async function start() {
     container.replaceChildren(fragment);
     if (!matches.length)
       container.innerHTML =
-        '<div class="ca-empty"><p>No datasets match these filters.</p><p class="atlas-subtle">Try removing a tag or changing the name search.</p><button type="button" class="ca-chip cursor-interaction" data-reset>Reset filters and search</button></div>';
+        '<div class="ca-empty"><p>No datasets match these filters.</p><p class="atlas-subtle">Try removing a tag or changing the name search.</p><button type="button" class="ca-chip" data-reset>Reset filters and search</button></div>';
     icons();
     if (!firstRender) {
       for (const el of container.querySelectorAll("[data-record]")) {
@@ -418,12 +369,6 @@ async function start() {
       ? "Close dataset details"
       : "Open dataset details";
   }
-  function moveNav() {
-    const active = q('[data-page][aria-current="page"]'),
-      indicator = q(".ca-nav-indicator");
-    indicator.style.width = active.offsetWidth + "px";
-    indicator.style.transform = `translateX(${active.offsetLeft}px)`;
-  }
   root.addEventListener("click", (e) => {
     const row = e.target.closest("[data-record]");
     if (
@@ -437,30 +382,6 @@ async function start() {
 
     const b = e.target.closest("button");
     if (!b || !root.contains(b)) return;
-    if (b.dataset.page) {
-      closePopover();
-      window.scrollTo({ top: 0, behavior: "instant" });
-      root
-        .querySelectorAll("[data-panel]")
-        .forEach((p) => (p.hidden = p.dataset.panel !== b.dataset.page));
-      root
-        .querySelectorAll("[data-page]")
-        .forEach((n) =>
-          n === b
-            ? n.setAttribute("aria-current", "page")
-            : n.removeAttribute("aria-current"),
-        );
-      moveNav();
-      const panel = q(`[data-panel="${b.dataset.page}"]`);
-      motion(
-        panel,
-        [
-          { opacity: 0.5, transform: "translateY(5px)" },
-          { opacity: 1, transform: "translateY(0)" },
-        ],
-        { duration: 180 },
-      );
-    }
     if (b.dataset.popover) openPopover(b.dataset.popover);
     if (b.hasAttribute("data-mobile-filters")) {
       const body = q(".ca-filter-body");
@@ -552,10 +473,8 @@ async function start() {
   });
   window.addEventListener("scroll", () => positionPopover(), { passive: true });
   window.addEventListener("resize", () => positionPopover(), { passive: true });
-  new ResizeObserver(() => {
-    moveNav();
-    positionPopover();
-  }).observe(q(".ca-shell"));
+  new ResizeObserver(positionPopover).observe(q(".ca-shell"));
+  root.addEventListener("atlas:pagechange", () => closePopover());
   const mobile = matchMedia("(max-width:760px)");
   const syncMobile = () => {
     q(".ca-filter-body").hidden = mobile.matches;
@@ -567,11 +486,11 @@ async function start() {
   mountGuide(root, vocab, closePopover);
   update();
   icons();
-  moveNav();
-  document.fonts.ready.then(moveNav);
-  requestAnimationFrame(() => q(".ca-nav").classList.add("ready"));
 }
-start().catch((error) => {
+const root = document.getElementById("causal-atlas");
+mountFooter(root, config);
+mountNavigation(root);
+start(root).catch((error) => {
   console.error(error);
   document.querySelector("[data-results]").innerHTML =
     '<p role="alert">The catalog could not be loaded. Please reload the page.</p>';
