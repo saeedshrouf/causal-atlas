@@ -6,15 +6,9 @@ The catalogue links to the original providers; it does not host datasets. See th
 
 Maintained by Saeed Shrouf, University of Toronto.
 
-## Run locally
+## Author's Note
 
-From the repository root:
-
-```sh
-python3 -m http.server 8000
-```
-
-Open <http://localhost:8000>. No build step is needed.
+Hello! I hope the resource helps in your research! Having worked on a number of causal ml projects in recent months, I thought something like this would be useful to centralize the majority of well-known public resources for the field.
 
 ## Contributions
 
