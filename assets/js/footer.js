@@ -48,7 +48,7 @@ export function mountFooter(root, config) {
                 Repository
               </a>
               <a
-                href="${repository}/issues/new?template=correction.yml"
+                href="${repository}/issues/new"
                 target="_blank"
                 rel="noopener noreferrer"
               >
