@@ -9,8 +9,7 @@
     "test": "node --test tests/*.test.mjs",
     "test:browser": "node tests/browser.mjs",
     "preview": "python3 -m http.server 8000",
-    "standalone": "node scripts/standalone.mjs",
-    "test:archive": "node --test tests/archive/*.test.mjs"
+    "standalone": "node scripts/standalone.mjs"
   },
   "devDependencies": {
     "esbuild": "0.28.2",
